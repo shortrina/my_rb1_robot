@@ -105,7 +105,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES my_rb1_description
-#  CATKIN_DEPENDS rospy urdf xacro
+  CATKIN_DEPENDS rospy urdf xacro
 #  DEPENDS system_lib
 )
 
