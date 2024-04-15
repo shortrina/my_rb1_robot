@@ -33,10 +33,13 @@
     </visual>
 </link>
 <!-- Joint for left_wheel-->
-<joint name="joint_left_wheel" type="fixed">
+<joint name="joint_left_wheel" type="continuous">
     <parent link="base_link"/>
     <child link="left_wheel"/>
     <origin xyz="0.0 -0.25 -0.15" rpy="0.0 0.0 0.0"/>        
+    <axis rpy="0 0 0" xyz="0 1 0" />
+    <limit effort="10000" velocity="1000" />
+    <joint_properties damping="1.0" friction="1.0" />
 </joint>
 <!-- Link for right_wheel -->
 <link name="right_wheel">
@@ -49,10 +52,13 @@
     </visual>
 </link>
 <!-- Joint for Right_wheel-->
-<joint name="joint_right_wheel" type="fixed">
+<joint name="joint_right_wheel" type="continuous">
     <parent link="base_link"/>
     <child link="right_wheel"/>
-    <origin xyz="0.0 0.25 -0.15" rpy="0.0 0.0 0.0"/>    
+    <origin xyz="0.0 0.25 -0.15" rpy="0.0 0.0 0.0"/>
+    <axis rpy="0 0 0" xyz="0 1 0" />
+    <limit effort="10000" velocity="1000" />
+    <joint_properties damping="1.0" friction="1.0" />    
 </joint>
 <link name="front_caster">
     <visual>
