@@ -1,0 +1,21 @@
+<launch>
+  <!-- Launch Gazebo with your robot model -->
+  <include file="$(find my_rb1_gazebo)/launch/my_rb1_robot_gazebo.launch">
+    <!-- <arg name="world_name" default="$(find rb1_base_gazebo)/worlds/ros2_online_workshop.world"/> -->
+    <!-- Add other arguments as needed -->
+  </include>
+
+  <!-- Spawn URDF model -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find my_rb1_description)/urdf/my_rb1_robot.urdf -urdf -z 1 -model my_rb1_robot2" />
+
+  <!-- Set robot_description parameter -->
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find my_rb1_description)/urdf/my_rb1_robot.urdf'" />
+
+  <!-- Launch robot_state_publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+  <!-- Launch joint_state_publisher -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <!-- Add any parameters as needed -->
+  </node>
+</launch>
