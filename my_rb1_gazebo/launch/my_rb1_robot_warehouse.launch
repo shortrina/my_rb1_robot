@@ -6,7 +6,7 @@
   </include>
 
   <!-- Spawn URDF model -->
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find my_rb1_description)/urdf/my_rb1_robot.urdf -urdf -z 1 -model my_rb1_robot2" />
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find my_rb1_description)/urdf/my_rb1_robot.urdf -urdf -z 1 -model my_rb1_robot" />
 
   <!-- Set robot_description parameter -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find my_rb1_description)/urdf/my_rb1_robot.urdf'" />
@@ -15,7 +15,6 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
   <!-- Launch joint_state_publisher -->
-  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    <!-- Add any parameters as needed -->
-  </node>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+  
 </launch>

@@ -161,7 +161,6 @@
       <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
     </inertial>
   </link>
-
   <joint name="joint_front_laser" type="continuous">
     <parent link="base_link"/>
     <child link="front_laser"/>
@@ -169,5 +168,48 @@
     <axis xyz="1.0 0.0 1.0"/>
     <limit lower="0.0" upper="0.0" effort="0.0" velocity="0.0"/>
   </joint>
+  <gazebo>
+     <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+       <rosDebugLevel>Debug</rosDebugLevel>
+         <publishWheelTF>True</publishWheelTF>
+         <publishTf>1</publishTf>
+         <publishWheelJointState>true</publishWheelJointState>
+         <alwaysOn>true</alwaysOn>
+         <!-- Plugin update rate in Hz -->
+        <updateRate>100</updateRate>
+    
+        <!-- Name of left joint, defaults to `left_joint` -->
+        <leftJoint>joint_left_wheel</leftJoint>
+    
+        <!-- Name of right joint, defaults to `right_joint` -->
+        <rightJoint>joint_right_wheel</rightJoint>
+    
+        <!-- The distance from the center of one wheel to the other, in meters, defaults to 0.34 m -->
+        <wheelSeparation>0.25</wheelSeparation>
+    
+        <!-- Diameter of the wheels, in meters, defaults to 0.15 m -->
+        <wheelDiameter>0.05</wheelDiameter>
+    
+        <!-- Wheel acceleration, in rad/s^2, defaults to 0.0 rad/s^2 -->
+        <wheelAcceleration>1.0</wheelAcceleration>
+    
+        <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
+        <wheelTorque>20</wheelTorque>
+    
+        <!-- Topic to receive geometry_msgs/Twist message commands, defaults to `cmd_vel` -->
+        <commandTopic>cmd_vel</commandTopic>
+    
+        <!-- Topic to publish nav_msgs/Odometry messages, defaults to `odom` -->
+        <odometryTopic>/odom</odometryTopic>
+        <robotBaseFrame>base_link</robotBaseFrame>
+    </plugin>
+  </gazebo>
+  <gazebo reference="front_laser">
+    <sensor type="ray" name="front_laser_sensor">
+      <plugin name="my_rb1_raser" filename="libgazebo_ros_laser.so">
+       <topicName>/scan</topicName>
+        <frameName>front_laser</frameName>
+      </plugin>
+    </sensor>
+  </gazebo> 
 </robot>
-
