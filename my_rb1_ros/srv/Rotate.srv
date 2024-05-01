@@ -1,0 +1,5 @@
+# Request message
+int32 degrees
+---
+# Response message
+bool result
