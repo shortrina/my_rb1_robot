@@ -1,6 +1,7 @@
 
 
 #include "../include/my_rb1_ros/my_rb1_rotate.hpp"
+#include "ros/init.h"
 
 MyRb1Rotate::MyRb1Rotate() {
 
@@ -26,11 +27,6 @@ bool MyRb1Rotate::Service_Rotate_Callback(my_rb1_ros::Rotate::Request &req,
 
   degrees = req.degrees;
 
-  if (degrees < -90 || degrees > 90) {
-    ROS_INFO("Degree should be between -90 and 90.");
-    return false;
-  }
-
   result = SetMyRb1RotateMsg(degrees);
 
   resp.result = result;
@@ -43,38 +39,54 @@ void MyRb1Rotate::Get_MyRb1_Position_Callback(
     const nav_msgs::Odometry::ConstPtr &nav_rb1_Odometry_status) {
 
   sub_position_msg_ = *nav_rb1_Odometry_status;
+  // Get the current angle from the odometry
   double roll, pitch, yaw;
+  tf::Quaternion quat;
+  tf::quaternionMsgToTF(sub_position_msg_.pose.pose.orientation, quat);
+  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
-  tf::Quaternion q(sub_position_msg_.pose.pose.orientation.x,
-                   sub_position_msg_.pose.pose.orientation.y,
-                   sub_position_msg_.pose.pose.orientation.z,
-                   sub_position_msg_.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(roll, pitch, yaw);
-
-  current_yaw = yaw;
+  // Update the current angle with thread protection
+  mutex_odom.lock();
+  current_angle = yaw;
+  mutex_odom.unlock();
 }
 
 bool MyRb1Rotate::SetMyRb1RotateMsg(int degrees) {
   ROS_INFO("Set MyRb1 Rotate Msg.");
+  bool rotation_complete = false;
+  double tolerance = 0.15;
+  target_angle = degrees * PI / 180.0; // Convert to radians
 
-  // Convert to radians
-  target_yaw = current_yaw + degrees * PI / 180.0;
-  geometry_msgs::Twist cmd_vel;
-  cmd_vel.angular.z = (target_yaw > current_yaw) ? 0.1 : -0.1;
+  double start_angle;
+  mutex_odom.lock();
+  start_angle = current_angle;
+  mutex_odom.unlock();
 
-  while (fabs(target_yaw - current_yaw) > 0.01) {
-    rotate_pub_.publish(cmd_vel);
+  double relative_angle = target_angle - start_angle;
+  relative_angle =
+      atan2(sin(relative_angle), cos(relative_angle)); // Normalize the angle
+
+  pub_rotate_msg_.angular.z = 0.5; // Angular velocity (adjust as needed)
+
+  while (ros::ok()) {
+    mutex_odom.lock();
+    double current_relative_angle = current_angle - start_angle;
+    current_relative_angle =
+        atan2(sin(current_relative_angle), cos(current_relative_angle));
+    mutex_odom.unlock();
+
+    double angle_diff = fabs(current_relative_angle - relative_angle);
+    if (angle_diff < tolerance) {
+      pub_rotate_msg_.angular.z = 0.0;
+      rotate_pub_.publish(pub_rotate_msg_);
+      rotation_complete = true;
+      break;
+    }
+
+    rotate_pub_.publish(pub_rotate_msg_);
     ros::spinOnce();
+    loop_rate_.sleep();
   }
 
-  cmd_vel.angular.z = 0;
-  rotate_pub_.publish(cmd_vel);
-
-  return true;
-}
-
-nav_msgs::Odometry MyRb1Rotate::GetMyRb1Position() {
-  ROS_INFO("Get MyRb1 Position.");
-  return sub_position_msg_;
+  return rotation_complete;
 }
