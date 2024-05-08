@@ -2,6 +2,8 @@
 
 #include "../include/my_rb1_ros/my_rb1_rotate.hpp"
 #include "ros/init.h"
+#include <cmath>
+#include <iostream>
 
 MyRb1Rotate::MyRb1Rotate() {
 
@@ -20,73 +22,78 @@ MyRb1Rotate::MyRb1Rotate() {
   ROS_INFO("Ready to rotate.");
 }
 
-/* Service call for rotate */
-bool MyRb1Rotate::Service_Rotate_Callback(my_rb1_ros::Rotate::Request &req,
-                                          my_rb1_ros::Rotate::Response &resp) {
-  ROS_INFO("Rotate received. Degrees: %d", req.degrees);
-
-  degrees = req.degrees;
-
-  result = SetMyRb1RotateMsg(degrees);
-
-  resp.result = result;
-
-  return true;
-}
-
 /* Get Position from Rb1 */
 void MyRb1Rotate::Get_MyRb1_Position_Callback(
     const nav_msgs::Odometry::ConstPtr &nav_rb1_Odometry_status) {
 
   sub_position_msg_ = *nav_rb1_Odometry_status;
-  // Get the current angle from the odometry
-  double roll, pitch, yaw;
-  tf::Quaternion quat;
-  tf::quaternionMsgToTF(sub_position_msg_.pose.pose.orientation, quat);
-  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
-  // Update the current angle with thread protection
-  mutex_odom.lock();
+  double roll, pitch, yaw;
+  tf::Quaternion q;
+  tf::quaternionMsgToTF(sub_position_msg_.pose.pose.orientation, q);
+  tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
   current_angle = yaw;
-  mutex_odom.unlock();
 }
 
-bool MyRb1Rotate::SetMyRb1RotateMsg(int degrees) {
-  ROS_INFO("Set MyRb1 Rotate Msg.");
-  bool rotation_complete = false;
-  double tolerance = 0.15;
-  target_angle = degrees * PI / 180.0; // Convert to radians
+/* Service call for rotate */
+bool MyRb1Rotate::Service_Rotate_Callback(my_rb1_ros::Rotate::Request &req,
+                                          my_rb1_ros::Rotate::Response &resp) {
+  ROS_INFO("Rotate received. Degrees: %d", req.degrees);
 
-  double start_angle;
-  mutex_odom.lock();
-  start_angle = current_angle;
-  mutex_odom.unlock();
+  double init_position = current_angle;
+  double size_angle = 0.0;
+  double input_angle = req.degrees * PI / 180.0;
+  double target_angle = current_angle + input_angle;
 
-  double relative_angle = target_angle - start_angle;
-  relative_angle =
-      atan2(sin(relative_angle), cos(relative_angle)); // Normalize the angle
+  double tolerance = 1.0; // degrees
 
-  pub_rotate_msg_.angular.z = 0.5; // Angular velocity (adjust as needed)
+  // Calculate the difference between target and current angles
+  double angleDiff = input_angle;
 
-  while (ros::ok()) {
-    mutex_odom.lock();
-    double current_relative_angle = current_angle - start_angle;
-    current_relative_angle =
-        atan2(sin(current_relative_angle), cos(current_relative_angle));
-    mutex_odom.unlock();
+  ROS_INFO("target_angle : %f ", target_angle);
+  ROS_INFO("input_angle : %f , current_angle : %f", input_angle, current_angle);
 
-    double angle_diff = fabs(current_relative_angle - relative_angle);
-    if (angle_diff < tolerance) {
-      pub_rotate_msg_.angular.z = 0.0;
-      rotate_pub_.publish(pub_rotate_msg_);
-      rotation_complete = true;
-      break;
-    }
+  // Define the direction of rotation based on the sign of angleDiff
+  double direction = (input_angle > 0) ? 1.0 : -1.0;
 
+  while (std::fabs(input_angle) > std::fabs(size_angle)) {
+    // Publish twist message to rotate the robot
+    pub_rotate_msg_.angular.z =
+        direction * 0.5; // Angular velocity (adjust as needed)
     rotate_pub_.publish(pub_rotate_msg_);
+
     ros::spinOnce();
     loop_rate_.sleep();
+
+    if (input_angle < PI) {
+      size_angle = current_angle - init_position;
+    } else {
+      size_angle = current_angle - init_position + 0.1;
+    }
+
+    // ROS_INFO(" ");
+    ROS_INFO("size_angle : %f , current_angle : %f", size_angle, current_angle);
+    // ROS_INFO("size_angle : %f", size_angle);
+
+  } // end while
+
+  ROS_INFO("input_angle %f size_angle : %f", std::fabs(input_angle),
+           fabs(size_angle));
+  //  Stop the robot
+  pub_rotate_msg_.angular.z = 0.0;
+  rotate_pub_.publish(pub_rotate_msg_);
+
+  loop_rate_.sleep();
+  angleDiff = std::fabs(input_angle) - std::fabs(size_angle);
+  // Set rotation complete flag
+  if (std::fabs(angleDiff) <= tolerance) {
+    rotation_complete = true;
+    ROS_INFO("Tolerance is bigger");
+  } else {
+    rotation_complete = false;
+    ROS_INFO("Tolerance is smaller");
   }
+  resp.result = rotation_complete;
 
   return rotation_complete;
 }

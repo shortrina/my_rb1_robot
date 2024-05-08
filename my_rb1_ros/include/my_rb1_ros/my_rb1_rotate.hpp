@@ -20,21 +20,13 @@ private:
   ros::Publisher rotate_pub_;
   geometry_msgs::Twist pub_rotate_msg_;
 
-  int degrees = 0; // Requested degrees
-
-  double angluar_velocity = 1.0;
   double current_angle = 0.0;
-  double target_angle = 0.0;
 
-  double input_radians = 0.0;
+  bool rotation_complete = false;
 
-  bool result = false; // Response result
-  bool rotate_start = false;
-
-  boost::mutex mutex_odom;
   const double PI = 3.14159265358979323846;
 
-  ros::Rate loop_rate_ = ros::Rate(1.0); // 100Hz
+  ros::Rate loop_rate_ = ros::Rate(40.0); // 100Hz
 
   bool Service_Rotate_Callback(my_rb1_ros::Rotate::Request &req,
                                my_rb1_ros::Rotate::Response &resp);
@@ -43,8 +35,6 @@ private:
 
 public:
   MyRb1Rotate();
-
-  bool SetMyRb1RotateMsg(int degrees = 0);
 };
 
 #endif // MY_RB1_ROTATE_HPP
